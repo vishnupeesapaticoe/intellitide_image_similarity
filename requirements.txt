@@ -1,0 +1,15 @@
+azure_storage==0.37.0
+efficientnet_pytorch==0.7.1
+fastapi==0.103.2
+locustio==0.999
+numpy==1.24.4
+pandas==2.0.2
+Pillow==10.0.0
+Pillow==10.0.1
+pydantic==1.10.9
+Requests==2.31.0
+rich==13.6.0
+starlette==0.31.1
+torchvision==0.15.1
+uvicorn==0.23.2
+validators==0.20.0
