@@ -1,15 +1,16 @@
-azure_storage==0.37.0
-efficientnet_pytorch==0.7.1
+-f https://download.pytorch.org/whl/torch_stable.html
+azure-storage-blob==12.24.1
 fastapi==0.103.2
-locustio==0.999
-numpy==1.24.4
-pandas==2.0.2
-Pillow==10.0.0
+locust==2.32.6
+numpy==2.2.3
+pandas==2.2.2
 Pillow==10.0.1
-pydantic==1.10.9
-Requests==2.31.0
+pydantic==2.7.4
+Requests==2.32.2
 rich==13.6.0
-starlette==0.31.1
-torchvision==0.15.1
+starlette==0.27.0
+torch==2.3.1+cpu
+torchvision==0.18.1+cpu
+six==1.17.0
 uvicorn==0.23.2
 validators==0.20.0

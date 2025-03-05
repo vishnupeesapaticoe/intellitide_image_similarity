@@ -9,12 +9,11 @@ from rich.console import Console
 import time
 import pandas as pd
 from concurrent.futures.thread import ThreadPoolExecutor
-from embedding_utils import get_image_embedding , get_norm
-
-
+from embedding_utils import get_image_embedding , get_norm , get_cosine_similarity
+import base64
 console = Console()
 start  = time.time()
-image_urls = open('images_list.txt','r').read().split('\n')
+#image_urls = open('images_list.txt','r').read().split('\n')
 
 
 def split_list_into_n_lists(list1, n):
@@ -55,7 +54,7 @@ def download_image(image_url):
     buffer.seek(0)
     ''' Converting from 4 channels to 3 and adding to img payload , embedding image here since we dont need the orginal image for the api response '''
     payload = generate_img_payload(get_image_embedding(Image.open(io.BytesIO(buffer.read())).convert("RGB")),image_url,1)
-
+    console.log(f'Downloaded {image_url} {filesize/1024} KB')
     return payload
 
 
@@ -63,7 +62,7 @@ def compute_cosine_manager(image_url,source_image_embedding):
     ''' This method will download the image and also check the similarity since its fast to do it while multithreading'''
     comp_image = download_image(image_url)
     norm = -1 # for status less than -2
-    if comp_image['status']==1:norm = get_norm(source_image_embedding,comp_image['embedding'])
+    if comp_image['status']==1:norm = get_cosine_similarity(source_image_embedding,comp_image['embedding'])
     comp_image['norm']=norm
     return comp_image
 
@@ -88,7 +87,9 @@ def thread_manager(source_image,image_urls,nb_workers=4):
 
 def get_image_report(source_image_url,image_urls):
     ''' first image needs to be only downloaded only once'''
+    start = time.time()
     source_image = download_image(source_image_url)
+    console.log('Downloaded source image:',source_image_url)
     if source_image['status']<0:
         del source_image['embedding']
         return source_image
@@ -98,12 +99,47 @@ def get_image_report(source_image_url,image_urls):
     ''' Usually norm is 0 when image is duplicate or the same '''
     if sum(df['norm'])==0:df['score']=100
     else:
-        df['score'] = [ (1 - i/sum(df['norm']))*100 for i in df['norm'] ]
-        df['score'] = df['score'].round(2)
+        #df['score'] = [ (1 - i/sum(df['norm']))*100 for i in df['norm'] ]
+        #df['score'] = df['score'].round(2)
+        df['score'] = df['norm']
         df = df.sort_values(by="score",ascending=False,kind="mergesort")
         df.reset_index(inplace=True)
         
     df = pd.concat([df, incorrect_df], ignore_index=True, sort=False)
     df = df.fillna(0)
     console.log(time.time()- start)
+    console.log(df)
     return df[['url','score','status']].to_dict(orient='records')
+
+# Base 64 image similarity service
+
+
+
+def get_embedding_from_base64(base64_string):
+    """Convert base64 string to image and get its embedding."""
+    # Decode the base64 string into bytes
+    image_data = base64.b64decode(base64_string)
+    
+    # Convert bytes to an image
+    image = Image.open(io.BytesIO(image_data)).convert("RGB")
+    
+    # Get the embedding
+    embedding = get_image_embedding(image)
+    
+    return embedding
+
+
+def get_image_report_base64(source_image : str,target_images : list):
+    """Generate image similarity report for base64 strings"""
+    console.log('Base64 image report started')
+    source_image_embedding = get_embedding_from_base64(source_image)
+    target_image_embeddings = [get_embedding_from_base64(i) for i in target_images]
+    total_images = len(target_images)
+    url = [i for i in range(1,total_images+1)]
+    score = [ get_cosine_similarity(source_image_embedding,i) for i in target_image_embeddings]
+    status = [1] * total_images
+    df = pd.DataFrame()
+    df['url'],df['score'],df['status'] = url,score,status
+    console.log(df)
+    return df[['url','score','status']].to_dict(orient='records')
+
